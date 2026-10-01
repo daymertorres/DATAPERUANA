@@ -29,6 +29,9 @@ let myUserId = null;
 const silentMessageIds = new Set();
 const pendingQueries = [];
 
+// ── Cache de Medios (Evita errores de entidad al descargar) ──
+const mediaCache = new Map();
+
 // ── Detectar si un mensaje es de "procesando" (temporal) ──────
 function isProcessingMessage(text) {
   if (!text || text.trim().length === 0) return false; // sin texto = podria ser el real
@@ -222,24 +225,30 @@ async function downloadFile(messageId) {
   if (!client || !targetGroup) throw new Error("No inicializado");
   const msgId = parseInt(messageId);
 
-  // Buscar primero en el chat privado del bot (donde llegan las respuestas ahora)
-  // y luego en el grupo como fallback
-  const searchTargets = [];
-  if (botUserId) searchTargets.push(botUserId);
-  if (botTarget) searchTargets.push(botTarget);
-  if (targetGroup) searchTargets.push(targetGroup.id);
-  searchTargets.push(targetGroup);
+  // Buscar primero en nuestra cache en memoria
+  let message = mediaCache.get(msgId);
 
-  let message = null;
-  for (const target of searchTargets) {
-    try {
-      const msgs = await client.getMessages(target, { ids: [msgId] });
-      if (msgs && msgs.length > 0 && msgs[0] && msgs[0].media) {
-        message = msgs[0];
-        console.log("[Telegram] Archivo encontrado en:", target === botUserId || target === botTarget ? "chat privado bot" : "grupo");
-        break;
-      }
-    } catch (e) { /* intentar siguiente */ }
+  if (message) {
+    console.log("[Telegram] Archivo encontrado en memoria (cache) para ID:", msgId);
+  } else {
+    // Buscar primero en el chat privado del bot (donde llegan las respuestas ahora)
+    // y luego en el grupo como fallback
+    const searchTargets = [];
+    if (botUserId) searchTargets.push(botUserId);
+    if (botTarget) searchTargets.push(botTarget);
+    if (targetGroup) searchTargets.push(targetGroup.id);
+    searchTargets.push(targetGroup);
+
+    for (const target of searchTargets) {
+      try {
+        const msgs = await client.getMessages(target, { ids: [msgId] });
+        if (msgs && msgs.length > 0 && msgs[0] && msgs[0].media) {
+          message = msgs[0];
+          console.log("[Telegram] Archivo encontrado en:", target === botUserId || target === botTarget ? "chat privado bot" : "grupo");
+          break;
+        }
+      } catch (e) { /* intentar siguiente */ }
+    }
   }
 
   if (!message) throw new Error("Mensaje no encontrado");
@@ -323,6 +332,16 @@ function listenForNewMessages(callback) {
   client.addEventHandler(async (event) => {
     try {
       const message = event.message;
+      if (!message) return;
+      
+      // Guardar SIEMPRE en cache temporal si tiene media (antes de cualquier return)
+      if (message.media) {
+        mediaCache.set(message.id, message);
+        if (mediaCache.size > 200) {
+          mediaCache.delete(mediaCache.keys().next().value);
+        }
+      }
+
       const peerId = message.peerId;
       let msgGroupId = null;
       let isBotPrivateMsg = false;
@@ -428,6 +447,15 @@ function listenForNewMessages(callback) {
       }
 
       // Broadcast normal (no hay consulta pendiente)
+      // Guardar en cache temporal si tiene media
+      if (message.media) {
+        mediaCache.set(message.id, message);
+        // Limpieza basica para no saturar memoria
+        if (mediaCache.size > 200) {
+          const firstKey = mediaCache.keys().next().value;
+          mediaCache.delete(firstKey);
+        }
+      }
       const serialized = await serializeMessage(message);
       console.log("[Telegram]", serialized.senderName + ":", (serialized.text || "[archivo]").substring(0, 60));
       if (onNewMessageCallback) onNewMessageCallback(serialized);
