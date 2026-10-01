@@ -296,8 +296,8 @@ function renderTextResult(title, rawText) {
     
     for (const line of lines) {
       let key = "", val = "";
-      // Patrón de clave-valor mejorado (acepta los dos puntos y nuevas claves)
-      let keyMatch = line.match(/^(Nombre|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[\s:]*(.*)/i);
+      // Patrón de clave-valor mejorado (exige al menos un separador válido)
+      let keyMatch = line.match(/^(Nombres?|Apellidos?|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[:\s]+(.*)/i);
       
       if (keyMatch) {
         key = keyMatch[1].trim();
@@ -305,7 +305,7 @@ function renderTextResult(title, rawText) {
         
         // Si detectamos un nuevo "Nombre" o "Titular" y ya tenemos datos, cerramos la tarjeta actual
         // y empezamos una nueva (útil cuando el bot envía varios resultados pegados)
-        if ((key.toLowerCase() === "nombre" || key.toLowerCase() === "titular") && rows !== "") {
+        if ((key.toLowerCase().startsWith("nombre") || key.toLowerCase() === "titular") && rows !== "") {
           totalCards++;
           html += `
             <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
@@ -328,12 +328,11 @@ function renderTextResult(title, rawText) {
           <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
           <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
         </tr>`;
-      } else if (!keyMatch && line.length > 3) {
-        // Lineas que no son clave-valor (ej. "DETALLE DE LINEAS:" o "929699486 | CLARO")
+      } else if (!keyMatch && (line.includes("|") || line.toLowerCase().includes("detalle de l"))) {
+        // SOLAMENTE atrapar las lineas de "DETALLE DE LINEAS:" y sus números para evitar romper las tarjetas de Búsqueda por Nombres
         hasValidKeys = true;
         let lineContent = esc(line);
-        // Si parece un título (todo mayúsculas o termina en dos puntos)
-        let isTitle = line.endsWith(":") || line === line.toUpperCase();
+        let isTitle = line.toLowerCase().includes("detalle");
         
         rows += `<tr>
           <td colspan="2" style="border-bottom: 1px solid var(--border); padding: ${isTitle ? '14px 14px 4px' : '6px 14px'}; color: ${isTitle ? 'var(--text2)' : 'var(--text)'}; font-size: ${isTitle ? '11px' : '13px'}; font-weight: ${isTitle ? '700' : '400'}; background: ${isTitle ? 'var(--surface2)' : 'transparent'}; text-transform: ${isTitle ? 'uppercase' : 'none'};">${lineContent}</td>
