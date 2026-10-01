@@ -1,0 +1,23 @@
+{
+  "name": "sad-consulta-ciudadana",
+  "version": "1.0.0",
+  "description": "Sistema de Consulta Ciudadana - Visor web en tiempo real con Telegram MTProto",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "big-integer": "^1.6.51",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "input": "^1.0.1",
+    "socket.io": "^4.6.1",
+    "teleproto": "^1.228.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
