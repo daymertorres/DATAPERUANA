@@ -373,18 +373,23 @@ function renderMediaResult(panelId, data) {
   }
 
   let html = `<div class="rmodal-media-result"><div class="rmodal-media-grid">`;
+  let hasValidMedia = false;
+
   data.mediaGroup.forEach((item, i) => {
-    const isImg = item.fileType==="photo"||item.fileType==="image"||/\.(png|jpg|jpeg|webp|gif)$/i.test(item.fileName||"");
-    const isPdf = item.fileType==="pdf"||/\.pdf$/i.test(item.fileName||"");
-    const name = esc(item.fileName || `archivo_${i+1}`);
-    if (isImg) {
-      html += `<div class="rmodal-img-item"><img src="/api/preview/${item.messageId}" alt="${name}" onclick="openLightbox(this.src)" /></div>`;
-    } else if (isPdf) {
-      html += `<div class="rmodal-pdf-wrap"><iframe class="rmodal-pdf-frame" src="/api/preview/${item.messageId}" title="${name}"></iframe></div>`;
-    }
+    const isPdf = item.fileType === "pdf" || /\.pdf$/i.test(item.fileName || "");
+    if (!isPdf) return; // Ignorar imágenes (como el thumbnail del bot)
+
+    hasValidMedia = true;
+    const name = esc(item.fileName || `documento_${i+1}.pdf`);
+    html += `<div class="rmodal-pdf-wrap"><iframe class="rmodal-pdf-frame" src="/api/preview/${item.messageId}" title="${name}"></iframe></div>`;
     html += `<a class="rmodal-download-btn" href="${esc(item.downloadUrl)}" download="${name}" target="_blank"><i class="ph ph-download-simple"></i> Descargar ${name}</a>`;
   });
   html += `</div></div>`;
+  
+  if (!hasValidMedia) {
+    showResultEmpty(panelId, "ph-warning", "Sin resultado", "No se encontraron documentos PDF.");
+    return;
+  }
   
   openResultModal("DOCUMENTO RESULTANTE", html);
 }

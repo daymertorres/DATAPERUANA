@@ -2334,13 +2334,47 @@ tbody tr:hover {
   }
 
   .rmodal-content {
-    flex-direction: column;
+    flex-direction: column-reverse; /* Foto arriba, tabla abajo */
+    gap: 16px;
   }
 
   .rmodal-media-col {
     width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .rmodal-media-box {
+    max-width: 200px; /* Limitar tamaño de foto en móvil */
+  }
+
+  .rmodal-table, .rmodal-table tbody, .rmodal-table tr, .rmodal-table td, .rmodal-table th {
+    display: block;
+    width: 100% !important;
+  }
+  
+  .rmodal-table thead {
+    display: none; /* Ocultar cabeceras en móvil */
+  }
+  
+  .rmodal-table tr {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .rmodal-table td {
+    padding: 2px 12px !important;
+    border: none !important;
+  }
+
+  .rmodal-table td:first-child {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 700;
+  }
+  
+  .rmodal-table td:last-child {
+    font-size: 14px;
+    color: var(--text);
   }
 
   .rmodal-dialog {
@@ -2349,8 +2383,8 @@ tbody tr:hover {
   }
 
   .rmodal {
-    padding: 10px;
-    align-items: flex-end;
+    padding: 16px;
+    align-items: center;
   }
 
   .dashboard-grid {
