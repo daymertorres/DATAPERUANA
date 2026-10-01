@@ -1,4 +1,4 @@
-﻿/**
+/**
  * app.js — ONIXDATA Sistema de Consulta
  * SPA limpia sin login/auth/admin. Bot: @onixdataa_bot
  * Comandos: /dni, /nm, /telx, /tels, /actana, /denuncias
@@ -22,17 +22,18 @@ function esc(s) {
 // ── Limpiar texto del bot (quitar símbolos, @, emojis decorativos) ─────────
 function cleanBotText(text) {
   if (!text) return "";
-  // Verificar si la respuesta es antispam/irrelevante
   if (isJunkResponse(text)) return null;
-  // Limpiar símbolos, @ y emojis no informativos pero preservar los datos
   return text
-    .replace(/@\w+/g, "")           // quitar menciones @usuario
-    .replace(/[➣»►▸•·★☆✓✗✦▶◀]/g, ":") // reemplazar flechas/símbolos por ":"
-    .replace(/[🔴🟢🔵🟣🟡🟠⬛⬜]/g, "") // quitar emojis de colores
-    .replace(/[🎉🎊🎯🔥💥⚡🚀]/g, "")  // quitar emojis decorativos
-    .replace(/_{2,}/g, " ")          // quitar subrayados repetidos
-    .replace(/\*{2,}/g, "")          // quitar negritas markdown
-    .replace(/\n{3,}/g, "\n\n")      // reducir saltos de línea excesivos
+    .replace(/@\w+/g, "")
+    .replace(/[➣»►▸•·★☆✓✗✦▶◀]/g, "") // quitarlos totalmente para diseño limpio
+    .replace(/➟/g, "")                // quitar flecha bot
+    .replace(/[🔴🟢🔵🟣🟡🟠⬛⬜]/g, "")
+    .replace(/[🎉🎊🎯🔥💥⚡🚀]/g, "")
+    .replace(/\[\s*ᴘᴇʀsᴏɴᴀ ʜᴀʟʟᴀᴅᴀ.*\]/gi, "") // quitar cabecera molesta
+    .replace(/_{2,}/g, " ")
+    .replace(/\*{2,}/g, "")
+    .replace(/-?\s*N\/A/gi, "")      // quitar los N/A
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -40,25 +41,8 @@ function cleanBotText(text) {
 function isJunkResponse(text) {
   if (!text || text.trim().length === 0) return true;
   const t = text.trim().toLowerCase();
-  // Respuestas muy cortas que no son datos
   if (t.length < 15 && !/\d{6,}/.test(t)) return true;
-  // Patrones de antispam/flood/error del bot
-  const junkPatterns = [
-    /anti.?spam/i,
-    /flood/i,
-    /demasiado.?(rapido|veloz|fast)/i,
-    /espera.+\d+.+segundo/i,
-    /wait.+second/i,
-    /rate.?limit/i,
-    /por favor espera/i,
-    /intenta.+m[aá]s.+tarde/i,
-    /try again later/i,
-    /\[pm\]/i,
-    /premium/i,
-    /compra/i,
-    /adquiere/i,
-  ];
-  // Si solo tiene @menciones y símbolos, es basura
+  const junkPatterns = [/anti.?spam/i, /flood/i, /demasiado.?(rapido|veloz|fast)/i, /espera.+\d+.+segundo/i, /wait.+second/i, /rate.?limit/i, /por favor espera/i, /intenta.+m[aá]s.+tarde/i, /try again later/i, /\[pm\]/i, /premium/i, /compra/i, /adquiere/i];
   const stripped = t.replace(/@\w+/g,"").replace(/[^a-z0-9\s]/g,"").trim();
   if (stripped.length < 5) return true;
   return junkPatterns.some(p => p.test(text));
@@ -258,7 +242,7 @@ function renderProfile(panelId, data, raw, photoUrl) {
 
   let mediaHtml = "";
   if (photoUrl) {
-    mediaHtml += `<div class="rmodal-media-box"><div class="rmodal-media-label">FOTO</div><img src="${esc(photoUrl)}" alt="Foto" onclick="openLightbox(this.src)" /></div>`;
+    mediaHtml += `<div class="rmodal-media-box"><div class="rmodal-media-label">FOTO RENIEC</div><img src="${esc(photoUrl)}" alt="Foto" onclick="openLightbox(this.src)" /></div>`;
   }
 
   const html = `
@@ -282,44 +266,83 @@ function renderProfile(panelId, data, raw, photoUrl) {
           </tbody>
         </table>
       </div>
-      <div class="rmodal-media-col">
-        ${mediaHtml}
-      </div>
+      ${mediaHtml ? `<div class="rmodal-media-col">${mediaHtml}</div>` : ""}
     </div>
   `;
   
   openResultModal("RESULTADO RENIEC — DNI", html);
 }
 
-// ── Renderizar texto limpio del bot ───────────────────────────
+// ── Renderizar texto limpio del bot (Tarjetas) ────────────────
 function renderTextResult(title, rawText) {
   const cleaned = cleanBotText(rawText);
   if (!cleaned) {
     openResultModal("Error", `<div class="rmodal-empty"><i class="ph ph-warning-circle"></i><p>Respuesta no válida del bot</p><small>El bot devolvió un mensaje inesperado o antispam. Intenta de nuevo.</small></div>`);
     return false;
   }
-  // Formato tabla para respuestas tipo CAMPO: VALOR
-  const lines = cleaned.split("\n").filter(l => l.trim());
-  let rows = "";
-  let hasTable = false;
-  for (const line of lines) {
-    const colonIdx = line.indexOf(":");
-    if (colonIdx > 0 && colonIdx < 30) {
-      const key = line.substring(0, colonIdx).trim();
-      const val = line.substring(colonIdx + 1).trim();
-      if (key && val) {
-        rows += `<tr><td>${esc(key)}</td><td>${esc(val)}</td></tr>`;
-        hasTable = true;
+  
+  // Dividir el texto en bloques (tarjetas) basándose en dobles saltos de línea
+  const blocks = cleaned.split(/\n\s*\n/).filter(b => b.trim());
+  let html = `<div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">`;
+  let totalCards = 0;
+
+  for (const block of blocks) {
+    const lines = block.split("\n").map(l => l.trim()).filter(l => l);
+    let rows = "";
+    
+    for (const line of lines) {
+      // Intentar dividir por algo que parezca clave y valor
+      let key = "", val = "";
+      // Si el bot usó algun delimitador o espacio despues de la primera palabra mayuscula
+      // Asumiremos que la primera o primeras 2 palabras antes de un espacio extra es clave,
+      // pero mejor usamos regex generico o simplemente dividir por el primer espacio despues de una palabra si no hay ":"
+      const parts = line.match(/^([\w\s\.]+)\s+([A-Z0-9].*)$/);
+      
+      // Dado que limpiamos las flechas "➟", quedo "Nombre FREDY..."
+      // Busquemos el patrón: Palabra clave al inicio, seguida del valor
+      let keyMatch = line.match(/^(Nombre|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n)\s+(.*)/i);
+      
+      if (keyMatch) {
+        key = keyMatch[1].trim();
+        val = keyMatch[2].trim();
+      } else {
+        // Si no, lo mostramos entero como un span o raw
+        if (line.length > 2) {
+          rows += `<tr><td colspan="2" style="border-bottom: 1px solid var(--border); padding: 10px 14px;">${esc(line)}</td></tr>`;
+        }
+        continue;
       }
+      
+      if (key && val && val.toLowerCase() !== "n/a") {
+        rows += `<tr>
+          <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
+          <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
+        </tr>`;
+      }
+    }
+    
+    if (rows) {
+      totalCards++;
+      html += `
+        <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+          <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+            <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
     }
   }
 
-  let html;
-  if (hasTable) {
-    html = `<div class="rmodal-table-wrap"><table class="rmodal-table"><thead><tr><th>Campo</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  } else {
+  if (totalCards === 0) {
+    // Fallback: mostrar el texto tal cual de manera bonita
     html = `<div class="rmodal-media-result"><pre class="rmodal-text-pre">${esc(cleaned)}</pre></div>`;
+  } else {
+    html += `</div>`;
   }
+  
   openResultModal(title, html);
   return true;
 }
