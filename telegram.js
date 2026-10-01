@@ -333,7 +333,7 @@ function listenForNewMessages(callback) {
     try {
       const message = event.message;
       if (!message) return;
-      
+
       // Guardar SIEMPRE en cache temporal si tiene media (antes de cualquier return)
       if (message.media) {
         mediaCache.set(message.id, message);
@@ -426,7 +426,8 @@ function listenForNewMessages(callback) {
             clearTimeout(entry.timer);
             entry.settled = true;
             const mainMsg = entry.messages.find(m => m.message && m.message.length > 20) || entry.messages[0];
-            const mediaMsg = entry.messages.find(m => m.media) || mainMsg;
+            // Usar reverse() para encontrar el ÚLTIMO mensaje con media, evadiendo miniaturas de "procesando" iniciales
+            const mediaMsg = [...entry.messages].reverse().find(m => m.media) || mainMsg;
 
             const serializedMain = await serializeMessage(mainMsg);
             const serializedMedia = mediaMsg !== mainMsg ? await serializeMessage(mediaMsg) : serializedMain;
