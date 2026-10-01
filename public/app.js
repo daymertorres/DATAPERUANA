@@ -242,7 +242,9 @@ function renderProfile(panelId, data, raw, photoUrl) {
 
   let mediaHtml = "";
   if (photoUrl) {
-    mediaHtml += `<div class="rmodal-media-box"><div class="rmodal-media-label">FOTO RENIEC</div><img src="${esc(photoUrl)}" alt="Foto" onclick="openLightbox(this.src)" /></div>`;
+    // Usar el endpoint de preview en lugar de download para que el navegador lo muestre en lugar de descargarlo
+    const previewUrl = photoUrl.replace("/api/download/", "/api/preview/");
+    mediaHtml += `<div class="rmodal-media-box"><div class="rmodal-media-label">FOTO RENIEC</div><img src="${esc(previewUrl)}" alt="Foto" onclick="openLightbox(this.src)" /></div>`;
   }
 
   const html = `
@@ -289,31 +291,23 @@ function renderTextResult(title, rawText) {
   for (const block of blocks) {
     const lines = block.split("\n").map(l => l.trim()).filter(l => l);
     let rows = "";
+    let hasValidKeys = false;
     
     for (const line of lines) {
-      // Intentar dividir por algo que parezca clave y valor
       let key = "", val = "";
-      // Si el bot usó algun delimitador o espacio despues de la primera palabra mayuscula
-      // Asumiremos que la primera o primeras 2 palabras antes de un espacio extra es clave,
-      // pero mejor usamos regex generico o simplemente dividir por el primer espacio despues de una palabra si no hay ":"
-      const parts = line.match(/^([\w\s\.]+)\s+([A-Z0-9].*)$/);
-      
-      // Dado que limpiamos las flechas "➟", quedo "Nombre FREDY..."
-      // Busquemos el patrón: Palabra clave al inicio, seguida del valor
+      // Patrón de clave-valor
       let keyMatch = line.match(/^(Nombre|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n)\s+(.*)/i);
       
       if (keyMatch) {
         key = keyMatch[1].trim();
         val = keyMatch[2].trim();
       } else {
-        // Si no, lo mostramos entero como un span o raw
-        if (line.length > 2) {
-          rows += `<tr><td colspan="2" style="border-bottom: 1px solid var(--border); padding: 10px 14px;">${esc(line)}</td></tr>`;
-        }
+        // Ignorar textos basura, pero si no se detectaron llaves aun, tal vez sea informacion cruda
         continue;
       }
       
       if (key && val && val.toLowerCase() !== "n/a") {
+        hasValidKeys = true;
         rows += `<tr>
           <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
           <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
@@ -321,7 +315,8 @@ function renderTextResult(title, rawText) {
       }
     }
     
-    if (rows) {
+    // Solo agregamos la tarjeta si tuvo datos reales
+    if (rows && hasValidKeys) {
       totalCards++;
       html += `
         <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
@@ -337,7 +332,7 @@ function renderTextResult(title, rawText) {
   }
 
   if (totalCards === 0) {
-    // Fallback: mostrar el texto tal cual de manera bonita
+    // Si ningun bloque tuvo formato clave/valor (por ej un texto plano importante)
     html = `<div class="rmodal-media-result"><pre class="rmodal-text-pre">${esc(cleaned)}</pre></div>`;
   } else {
     html += `</div>`;
