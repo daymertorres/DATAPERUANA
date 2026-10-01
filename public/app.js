@@ -284,76 +284,78 @@ function renderTextResult(title, rawText) {
     return false;
   }
   
-  // Dividir el texto en bloques (tarjetas) basándose en dobles saltos de línea
-  const blocks = cleaned.split(/\n\s*\n/).filter(b => b.trim());
+  const lines = cleaned.split("\n").map(l => l.trim()).filter(l => l);
   let html = `<div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">`;
   let totalCards = 0;
+  let rows = "";
+  let hasValidKeys = false;
+  let hasPersonData = false;
 
-  for (const block of blocks) {
-    const lines = block.split("\n").map(l => l.trim()).filter(l => l);
-    let rows = "";
-    let hasValidKeys = false;
+  for (const line of lines) {
+    let key = "", val = "";
+    // Patrón de clave-valor mejorado
+    let keyMatch = line.match(/^(Nombres?|Apellidos?|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[:\s]+(.*)/i);
     
-    for (const line of lines) {
-      let key = "", val = "";
-      // Patrón de clave-valor mejorado (exige al menos un separador válido)
-      let keyMatch = line.match(/^(Nombres?|Apellidos?|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[:\s]+(.*)/i);
+    if (keyMatch) {
+      key = keyMatch[1].trim();
+      val = keyMatch[2].trim();
       
-      if (keyMatch) {
-        key = keyMatch[1].trim();
-        val = keyMatch[2].trim();
-        
-        // Si detectamos un nuevo "Nombre" o "Titular" y ya tenemos datos, cerramos la tarjeta actual
-        // y empezamos una nueva (útil cuando el bot envía varios resultados pegados)
-        if ((key.toLowerCase().startsWith("nombre") || key.toLowerCase() === "titular") && rows !== "") {
-          totalCards++;
-          html += `
-            <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
-              <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
-                <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
-              </div>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tbody>${rows}</tbody>
-              </table>
+      let isPersonStart = key.toLowerCase().startsWith("nombre") || key.toLowerCase() === "titular";
+      
+      // Separar tarjetas SOLO si ya tenemos a una persona en la tarjeta actual y encontramos otra
+      if (isPersonStart && hasPersonData) {
+        totalCards++;
+        html += `
+          <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+            <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+              <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
             </div>
-          `;
-          rows = "";
-          hasValidKeys = false;
-        }
+            <table style="width: 100%; border-collapse: collapse;">
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+        rows = "";
+        hasValidKeys = false;
+        hasPersonData = false;
       }
       
-      if (key && val && val.toLowerCase() !== "n/a") {
-        hasValidKeys = true;
-        rows += `<tr>
-          <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
-          <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
-        </tr>`;
-      } else if (!keyMatch && (line.includes("|") || line.toLowerCase().includes("detalle de l"))) {
-        // SOLAMENTE atrapar las lineas de "DETALLE DE LINEAS:" y sus números para evitar romper las tarjetas de Búsqueda por Nombres
-        hasValidKeys = true;
-        let lineContent = esc(line);
-        let isTitle = line.toLowerCase().includes("detalle");
-        
-        rows += `<tr>
-          <td colspan="2" style="border-bottom: 1px solid var(--border); padding: ${isTitle ? '14px 14px 4px' : '6px 14px'}; color: ${isTitle ? 'var(--text2)' : 'var(--text)'}; font-size: ${isTitle ? '11px' : '13px'}; font-weight: ${isTitle ? '700' : '400'}; background: ${isTitle ? 'var(--surface2)' : 'transparent'}; text-transform: ${isTitle ? 'uppercase' : 'none'};">${lineContent}</td>
-        </tr>`;
+      if (isPersonStart) {
+        hasPersonData = true;
       }
     }
     
-    // Solo agregamos la tarjeta si tuvo datos reales
-    if (rows && hasValidKeys) {
-      totalCards++;
-      html += `
-        <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
-          <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
-            <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
-          </div>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      `;
+    if (key && val && val.toLowerCase() !== "n/a") {
+      hasValidKeys = true;
+      rows += `<tr>
+        <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
+        <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
+      </tr>`;
+    } else if (!keyMatch && (/^\d+\s*\|/.test(line) || line.toLowerCase().includes("detalle de l"))) {
+      // SOLAMENTE atrapar las lineas de "DETALLE DE LINEAS:" y sus números (ej. 929699486 | CLARO)
+      hasValidKeys = true;
+      let lineContent = esc(line);
+      let isTitle = line.toLowerCase().includes("detalle");
+      
+      rows += `<tr>
+        <td colspan="2" style="border-bottom: 1px solid var(--border); padding: ${isTitle ? '14px 14px 4px' : '6px 14px'}; color: ${isTitle ? 'var(--text2)' : 'var(--text)'}; font-size: ${isTitle ? '11px' : '13px'}; font-weight: ${isTitle ? '700' : '400'}; background: ${isTitle ? 'var(--surface2)' : 'transparent'}; text-transform: ${isTitle ? 'uppercase' : 'none'};">${lineContent}</td>
+      </tr>`;
     }
+  }
+  
+  // Agregar la última tarjeta que quedó pendiente
+  if (rows && hasValidKeys) {
+    totalCards++;
+    html += `
+      <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+        <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+          <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
   }
 
   if (totalCards === 0) {
