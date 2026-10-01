@@ -291,10 +291,19 @@ function renderTextResult(title, rawText) {
   let hasValidKeys = false;
   let hasPersonData = false;
 
+  // Personalizar qué campos leemos dependiendo de la consulta (para ocultar basura)
+  let keyList = "Nombres?|Apellidos?|DNI|Edad|G[ée]nero|F\\. Nac\\.|Fecha|Celular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n";
+  if (title === "LÍNEAS TELEFÓNICAS POR DNI") {
+    keyList += "|Titular|Registros|Saldo|Consultor";
+  } else if (title === "BÚSQUEDA POR NOMBRE") {
+    keyList += "|Titular"; // Permitir Titular por si acaso, pero omitir Consultor
+  }
+
+  const regex = new RegExp(`^(${keyList})[:\\s]+(.*)`, "i");
+
   for (const line of lines) {
     let key = "", val = "";
-    // Patrón de clave-valor mejorado
-    let keyMatch = line.match(/^(Nombres?|Apellidos?|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[:\s]+(.*)/i);
+    let keyMatch = line.match(regex);
     
     if (keyMatch) {
       key = keyMatch[1].trim();
