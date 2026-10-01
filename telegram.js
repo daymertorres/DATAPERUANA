@@ -397,31 +397,32 @@ function listenForNewMessages(callback) {
           entry.messages.push(message);
           console.log("[Telegram] DNI: Mensaje de datos recibido, colectando...");
 
-          if (!entry.collectTimer) {
-            entry.collectTimer = setTimeout(async () => {
-              if (entry.settled) return;
-              const idx = pendingQueries.indexOf(entry);
-              if (idx !== -1) pendingQueries.splice(idx, 1);
-              clearTimeout(entry.timer);
-              entry.settled = true;
-              const mainMsg = entry.messages.find(m => m.message && m.message.length > 20) || entry.messages[0];
-              const mediaMsg = entry.messages.find(m => m.media) || mainMsg;
-              
-              const serializedMain = await serializeMessage(mainMsg);
-              const serializedMedia = mediaMsg !== mainMsg ? await serializeMessage(mediaMsg) : serializedMain;
+          // Resetear el timer en cada mensaje nuevo (debounce)
+          if (entry.collectTimer) clearTimeout(entry.collectTimer);
 
-              entry.resolve({
-                type: "text",
-                message: {
-                  ...serializedMain,
-                  hasMedia: serializedMedia.hasMedia,
-                  downloadUrl: serializedMedia.downloadUrl,
-                  fileType: serializedMedia.fileType
-                },
-                text: entry.messages.map(m => m.message || "").join("\n").trim(),
-              });
-            }, 2500); // 2.5s para colectar partes del mensaje
-          }
+          entry.collectTimer = setTimeout(async () => {
+            if (entry.settled) return;
+            const idx = pendingQueries.indexOf(entry);
+            if (idx !== -1) pendingQueries.splice(idx, 1);
+            clearTimeout(entry.timer);
+            entry.settled = true;
+            const mainMsg = entry.messages.find(m => m.message && m.message.length > 20) || entry.messages[0];
+            const mediaMsg = entry.messages.find(m => m.media) || mainMsg;
+            
+            const serializedMain = await serializeMessage(mainMsg);
+            const serializedMedia = mediaMsg !== mainMsg ? await serializeMessage(mediaMsg) : serializedMain;
+
+            entry.resolve({
+              type: "text",
+              message: {
+                ...serializedMain,
+                hasMedia: serializedMedia.hasMedia,
+                downloadUrl: serializedMedia.downloadUrl,
+                fileType: serializedMedia.fileType
+              },
+              text: entry.messages.map(m => m.message || "").join("\n").trim(),
+            });
+          }, 2500); // 2.5s desde el ULTIMO mensaje recibido
           return;
         }
       }
