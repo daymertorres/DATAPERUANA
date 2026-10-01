@@ -30,6 +30,7 @@ function cleanBotText(text) {
     .replace(/[🔴🟢🔵🟣🟡🟠⬛⬜]/g, "")
     .replace(/[🎉🎊🎯🔥💥⚡🚀]/g, "")
     .replace(/\[\s*ᴘᴇʀsᴏɴᴀ ʜᴀʟʟᴀᴅᴀ.*\]/gi, "") // quitar cabecera molesta
+    .replace(/RESULTADO DE BÚSQUEDA/gi, "")    // quitar cabecera redundante
     .replace(/_{2,}/g, " ")
     .replace(/\*{2,}/g, "")
     .replace(/-?\s*N\/A/gi, "")      // quitar los N/A
@@ -295,8 +296,8 @@ function renderTextResult(title, rawText) {
     
     for (const line of lines) {
       let key = "", val = "";
-      // Patrón de clave-valor
-      let keyMatch = line.match(/^(Nombre|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n)\s+(.*)/i);
+      // Patrón de clave-valor mejorado (acepta los dos puntos y nuevas claves)
+      let keyMatch = line.match(/^(Nombre|DNI|Edad|G[ée]nero|F\. Nac\.|Fecha|Celular|Titular|Direcci[óo]n|Operador|Plan|L[íi]nea|Estado|Documento|Descripci[óo]n|Registros|Saldo|Consultor)[\s:]*(.*)/i);
       
       if (keyMatch) {
         key = keyMatch[1].trim();
@@ -319,9 +320,6 @@ function renderTextResult(title, rawText) {
           rows = "";
           hasValidKeys = false;
         }
-      } else {
-        // Ignorar textos basura
-        continue;
       }
       
       if (key && val && val.toLowerCase() !== "n/a") {
@@ -329,6 +327,16 @@ function renderTextResult(title, rawText) {
         rows += `<tr>
           <td style="width: 35%; border-bottom: 1px solid var(--border); padding: 10px 14px; font-weight: 700; color: var(--text3); font-size: 11px; text-transform: uppercase; background: var(--surface2);">${esc(key)}</td>
           <td style="border-bottom: 1px solid var(--border); padding: 10px 14px; color: var(--text); font-size: 13px;">${esc(val)}</td>
+        </tr>`;
+      } else if (!keyMatch && line.length > 3) {
+        // Lineas que no son clave-valor (ej. "DETALLE DE LINEAS:" o "929699486 | CLARO")
+        hasValidKeys = true;
+        let lineContent = esc(line);
+        // Si parece un título (todo mayúsculas o termina en dos puntos)
+        let isTitle = line.endsWith(":") || line === line.toUpperCase();
+        
+        rows += `<tr>
+          <td colspan="2" style="border-bottom: 1px solid var(--border); padding: ${isTitle ? '14px 14px 4px' : '6px 14px'}; color: ${isTitle ? 'var(--text2)' : 'var(--text)'}; font-size: ${isTitle ? '11px' : '13px'}; font-weight: ${isTitle ? '700' : '400'}; background: ${isTitle ? 'var(--surface2)' : 'transparent'}; text-transform: ${isTitle ? 'uppercase' : 'none'};">${lineContent}</td>
         </tr>`;
       }
     }
