@@ -15,7 +15,7 @@ const DOWNLOADS_DIR = path.join(__dirname, "public", "downloads");
 // En Vercel (serverless), el sistema de archivos es de solo lectura en produccion.
 // Intentamos crear el dir, pero si falla (read-only) lo ignoramos; los medios
 // seran servidos directamente desde memoria sin pasar por disco.
-try { if (!fs.existsSync(DOWNLOADS_DIR)) fs.mkdirSync(DOWNLOADS_DIR, { recursive: true }); } catch(e) {}
+try { if (!fs.existsSync(DOWNLOADS_DIR)) fs.mkdirSync(DOWNLOADS_DIR, { recursive: true }); } catch (e) { }
 
 let client = null;
 let targetGroup = null;
@@ -69,7 +69,7 @@ function loadSession() {
       const s = fs.readFileSync(SESSION_FILE, "utf8").trim();
       if (s) { console.log("[Telegram] Sesion cargada desde session.txt."); return s; }
     }
-  } catch (e) {}
+  } catch (e) { }
   return "";
 }
 function saveSession(s) {
@@ -247,7 +247,7 @@ async function downloadFile(messageId) {
 
   const fileName = getFileName(message) || "archivo_" + messageId;
   const buffer = await client.downloadMedia(message, {
-    progressCallback: (r, t) => { if (t > 0) process.stdout.write("\r[Telegram] " + Math.round(r/t*100) + "%"); }
+    progressCallback: (r, t) => { if (t > 0) process.stdout.write("\r[Telegram] " + Math.round(r / t * 100) + "%"); }
   });
   console.log("\n[Telegram] Descarga completa:", fileName);
 
@@ -294,7 +294,7 @@ async function sendCommandAndWait(command, options) {
       entry.settled = true;
       const idx = pendingQueries.indexOf(entry);
       if (idx !== -1) pendingQueries.splice(idx, 1);
-      reject(new Error("Tiempo agotado. El bot no respondio en " + (timeoutMs/1000) + "s."));
+      reject(new Error("Tiempo agotado. El bot no respondio en " + (timeoutMs / 1000) + "s."));
     }, timeoutMs);
 
     pendingQueries.push(entry);
@@ -362,26 +362,26 @@ function listenForNewMessages(callback) {
           if (hasMedia) {
             entry.messages.push(message);
             console.log("[Telegram] AGV: Media recibida, colectando...");
-              if (!entry.collectTimer) {
-                entry.collectTimer = setTimeout(async () => {
-                  if (entry.settled) return;
-                  const idx = pendingQueries.indexOf(entry);
-                  if (idx !== -1) pendingQueries.splice(idx, 1);
-                  clearTimeout(entry.timer);
-                  entry.settled = true;
+            if (!entry.collectTimer) {
+              entry.collectTimer = setTimeout(async () => {
+                if (entry.settled) return;
+                const idx = pendingQueries.indexOf(entry);
+                if (idx !== -1) pendingQueries.splice(idx, 1);
+                clearTimeout(entry.timer);
+                entry.settled = true;
 
-                  const mediaItems = [];
-                  for (const m of entry.messages) {
-                    if (m.media) {
-                      const serialized = await serializeMessage(m);
-                      mediaItems.push(serialized);
-                    }
+                const mediaItems = [];
+                for (const m of entry.messages) {
+                  if (m.media) {
+                    const serialized = await serializeMessage(m);
+                    mediaItems.push(serialized);
                   }
-                  console.log("[Telegram] AGV: Respuesta resuelta con", mediaItems.length, "media(s)");
-                  entry.resolve({ type: "media_group", messages: mediaItems });
-                }, 5000); // Aumentado a 5s para colectar TODOS los PDFs/album completo
-              }
-              return;
+                }
+                console.log("[Telegram] AGV: Respuesta resuelta con", mediaItems.length, "media(s)");
+                entry.resolve({ type: "media_group", messages: mediaItems });
+              }, 5000); // Aumentado a 5s para colectar TODOS los PDFs/album completo
+            }
+            return;
           }
           // Texto sin "procesando" y sin media: podria ser mensaje intermedio, saltarlo
           return;
@@ -390,12 +390,6 @@ function listenForNewMessages(callback) {
           if (isProcessingMessage(msgText)) {
             entry.skipped++;
             console.log("[Telegram] DNI: Saltando mensaje de procesando (" + entry.skipped + "):", msgText.substring(0, 60));
-            return;
-          }
-          if (!msgText && hasMedia) {
-            // Solo media sin texto en modo texto - es el thumbnail de procesando
-            entry.skipped++;
-            console.log("[Telegram] DNI: Saltando media sin texto (" + entry.skipped + ")");
             return;
           }
 
@@ -414,7 +408,7 @@ function listenForNewMessages(callback) {
             entry.settled = true;
             const mainMsg = entry.messages.find(m => m.message && m.message.length > 20) || entry.messages[0];
             const mediaMsg = entry.messages.find(m => m.media) || mainMsg;
-            
+
             const serializedMain = await serializeMessage(mainMsg);
             const serializedMedia = mediaMsg !== mainMsg ? await serializeMessage(mediaMsg) : serializedMain;
 
@@ -452,7 +446,7 @@ function scheduleReconnect(apiId, apiHash, phoneNumber) {
   if (reconnectTimer) clearTimeout(reconnectTimer);
   reconnectAttempts++;
   const delay = Math.min(5000 * reconnectAttempts, 60000);
-  console.log("[Telegram] Reconectando en", delay/1000 + "s...");
+  console.log("[Telegram] Reconectando en", delay / 1000 + "s...");
   reconnectTimer = setTimeout(async () => {
     const ok = await connect(apiId, apiHash, phoneNumber);
     if (ok) { reconnectAttempts = 0; await resolveGroup(process.env.TARGET_GROUP); listenForNewMessages(onNewMessageCallback); }
