@@ -301,8 +301,26 @@ function renderTextResult(title, rawText) {
       if (keyMatch) {
         key = keyMatch[1].trim();
         val = keyMatch[2].trim();
+        
+        // Si detectamos un nuevo "Nombre" o "Titular" y ya tenemos datos, cerramos la tarjeta actual
+        // y empezamos una nueva (útil cuando el bot envía varios resultados pegados)
+        if ((key.toLowerCase() === "nombre" || key.toLowerCase() === "titular") && rows !== "") {
+          totalCards++;
+          html += `
+            <div class="rmodal-table-wrap" style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+              <div style="background: var(--surface2); border-bottom: 1px solid var(--border); padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+                <i class="ph ph-user-circle" style="font-size: 16px; color: var(--accent);"></i> Resultado #${totalCards}
+              </div>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          `;
+          rows = "";
+          hasValidKeys = false;
+        }
       } else {
-        // Ignorar textos basura, pero si no se detectaron llaves aun, tal vez sea informacion cruda
+        // Ignorar textos basura
         continue;
       }
       
