@@ -147,19 +147,26 @@ async function serializeMessage(message) {
 }
 
 // ── Conectar ───────────────────────────────────────────────────
+// Errores que NO deben reintentar (config incorrecta, no de red)
+const FATAL_ERRORS = ["API ID invalid", "API_ID_INVALID", "PHONE_NUMBER_INVALID", "AUTH_KEY_INVALID", "cannot be empty"];
+function isFatalError(msg) { return FATAL_ERRORS.some(e => msg && msg.includes(e)); }
+
 async function connect(apiId, apiHash, phoneNumber) {
   if (isConnecting) { console.log("[Telegram] Ya conectando..."); return false; }
   isConnecting = true;
   const session = new StringSession(loadSession());
-  client = new TelegramClient(session, parseInt(apiId), apiHash, {
-    connectionRetries: 10, retryDelay: 2000, autoReconnect: true, useWSS: false,
+  client = new TelegramClient(session, parseInt(apiId, 10), apiHash, {
+    connectionRetries: 3, retryDelay: 3000, autoReconnect: false, useWSS: false,
   });
   try {
     await client.start({
       phoneNumber: async () => phoneNumber,
       password: async () => { console.log("[Telegram] 2FA requerida:"); return await input.text("Contrasena 2FA: "); },
-      phoneCode: async () => { console.log("[Telegram] Codigo enviado."); return await input.text("Codigo: "); },
-      onError: (err) => console.error("[Telegram] Error auth:", err.message),
+      phoneCode: async () => { console.log("[Telegram] Codigo enviado al telefono."); return await input.text("Codigo de verificacion: "); },
+      onError: (err) => {
+        console.error("[Telegram] Error auth:", err.message);
+        if (isFatalError(err.message)) throw err; // detener reintentos
+      },
     });
     saveSession(client.session.save());
     const me = await client.getMe();
@@ -168,9 +175,14 @@ async function connect(apiId, apiHash, phoneNumber) {
     isConnecting = false;
     return true;
   } catch (err) {
-    console.error("[Telegram] Error:", err.message);
+    console.error("[Telegram] Error de conexion:", err.message);
     isConnecting = false;
-    scheduleReconnect(apiId, apiHash, phoneNumber);
+    // Solo reintenta si NO es error fatal de configuracion
+    if (!isFatalError(err.message)) {
+      scheduleReconnect(apiId, apiHash, phoneNumber);
+    } else {
+      console.error("[Telegram] Error fatal — revisa API_ID, API_HASH y PHONE_NUMBER en .env");
+    }
     return false;
   }
 }
@@ -344,26 +356,26 @@ function listenForNewMessages(callback) {
           if (hasMedia) {
             entry.messages.push(message);
             console.log("[Telegram] AGV: Media recibida, colectando...");
-            if (!entry.collectTimer) {
-              entry.collectTimer = setTimeout(async () => {
-                if (entry.settled) return;
-                const idx = pendingQueries.indexOf(entry);
-                if (idx !== -1) pendingQueries.splice(idx, 1);
-                clearTimeout(entry.timer);
-                entry.settled = true;
+              if (!entry.collectTimer) {
+                entry.collectTimer = setTimeout(async () => {
+                  if (entry.settled) return;
+                  const idx = pendingQueries.indexOf(entry);
+                  if (idx !== -1) pendingQueries.splice(idx, 1);
+                  clearTimeout(entry.timer);
+                  entry.settled = true;
 
-                const mediaItems = [];
-                for (const m of entry.messages) {
-                  if (m.media) {
-                    const serialized = await serializeMessage(m);
-                    mediaItems.push(serialized);
+                  const mediaItems = [];
+                  for (const m of entry.messages) {
+                    if (m.media) {
+                      const serialized = await serializeMessage(m);
+                      mediaItems.push(serialized);
+                    }
                   }
-                }
-                console.log("[Telegram] AGV: Respuesta resuelta con", mediaItems.length, "media(s)");
-                entry.resolve({ type: "media_group", messages: mediaItems });
-              }, 2500); // 2.5s para colectar todo el album
-            }
-            return;
+                  console.log("[Telegram] AGV: Respuesta resuelta con", mediaItems.length, "media(s)");
+                  entry.resolve({ type: "media_group", messages: mediaItems });
+                }, 5000); // Aumentado a 5s para colectar TODOS los PDFs/album completo
+              }
+              return;
           }
           // Texto sin "procesando" y sin media: podria ser mensaje intermedio, saltarlo
           return;
