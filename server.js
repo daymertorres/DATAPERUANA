@@ -1,4 +1,4 @@
-﻿/**
+/**
  * server.js — Express + Socket.IO
  * API REST + WebSocket + Consultas silenciosas al bot @onixdataa_bot
  * Comandos: /dni, /nm, /telx, /tels, /actana, /denuncias
@@ -261,6 +261,7 @@ app.get("/api/preview/:messageId", async (req, res) => {
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.send(buffer);
   } catch (err) {
+    console.error("[API] Error al generar preview de", req.params.messageId, ":", err);
     res.status(500).send("Error al cargar archivo");
   }
 });

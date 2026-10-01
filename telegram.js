@@ -224,7 +224,11 @@ async function downloadFile(messageId) {
 
   // Buscar primero en el chat privado del bot (donde llegan las respuestas ahora)
   // y luego en el grupo como fallback
-  const searchTargets = botTarget ? [botTarget, targetGroup] : [targetGroup];
+  const searchTargets = [];
+  if (botUserId) searchTargets.push(botUserId);
+  if (botTarget) searchTargets.push(botTarget);
+  if (targetGroup) searchTargets.push(targetGroup.id);
+  searchTargets.push(targetGroup);
 
   let message = null;
   for (const target of searchTargets) {
@@ -232,7 +236,7 @@ async function downloadFile(messageId) {
       const msgs = await client.getMessages(target, { ids: [msgId] });
       if (msgs && msgs.length > 0 && msgs[0] && msgs[0].media) {
         message = msgs[0];
-        console.log("[Telegram] Archivo encontrado en:", botTarget && target === botTarget ? "chat privado bot" : "grupo");
+        console.log("[Telegram] Archivo encontrado en:", target === botUserId || target === botTarget ? "chat privado bot" : "grupo");
         break;
       }
     } catch (e) { /* intentar siguiente */ }
@@ -242,10 +246,12 @@ async function downloadFile(messageId) {
   if (!message.media) throw new Error("Sin adjunto");
 
   const fileName = getFileName(message) || "archivo_" + messageId;
-  const buffer = await client.downloadMedia(message.media, {
+  const buffer = await client.downloadMedia(message, {
     progressCallback: (r, t) => { if (t > 0) process.stdout.write("\r[Telegram] " + Math.round(r/t*100) + "%"); }
   });
   console.log("\n[Telegram] Descarga completa:", fileName);
+
+  if (!buffer) throw new Error("Buffer vacio al descargar");
 
   // Detectar mimeType: fotos (MessageMediaPhoto) no tienen document
   let mimeType = "application/octet-stream";
