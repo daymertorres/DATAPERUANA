@@ -9,6 +9,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const path = require("path");
+const multer = require("multer");
 const telegram = require("./telegram");
 
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,16 @@ app.use(cors({
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
+
+// Multer en memoria para fotos de búsqueda facial
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB máx
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Solo se permiten imágenes."), false);
+  },
+});
 
 let telegramReady = false;
 let connectionStatus = "connecting";
@@ -235,6 +246,31 @@ app.post("/api/query/denuncias", async (req, res) => {
     console.error("[API] Error DENUNCIAS:", err.message);
     res.status(504).json({ error: err.message });
   }
+});
+
+// ── API: Búsqueda Facial (/facial + foto) ─────────────────────
+app.post("/api/query/facial", uploadMemory.single("photo"), async (req, res) => {
+  if (!telegramReady) return res.status(503).json({ error: "Telegram no conectado." });
+  if (!req.file) return res.status(400).json({ error: "No se recibió ninguna imagen." });
+  console.log("[API] Búsqueda FACIAL: imagen recibida", req.file.originalname, req.file.size, "bytes");
+  try {
+    const result = await telegram.sendPhotoAndWait(
+      req.file.buffer,
+      req.file.mimetype,
+      { timeoutMs: 60000 }
+    );
+    res.json(mediaResponse(result));
+  } catch (err) {
+    console.error("[API] Error FACIAL:", err.message);
+    res.status(504).json({ error: err.message });
+  }
+});
+
+// Error handler de multer
+app.use((err, req, res, next) => {
+  if (err.code === "LIMIT_FILE_SIZE") return res.status(413).json({ error: "La imagen supera los 15 MB." });
+  if (err.message) return res.status(400).json({ error: err.message });
+  next(err);
 });
 
 // ── API: Descarga ──────────────────────────────────────────────

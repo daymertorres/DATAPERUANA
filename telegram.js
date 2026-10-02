@@ -281,6 +281,53 @@ async function sendMessage(text) {
   return serializeMessage(result);
 }
 
+// ── Enviar foto al bot y esperar respuesta PDF (para /facial) ─
+async function sendPhotoAndWait(photoBuffer, mimeType, options) {
+  if (!client || !targetGroup) throw new Error("No conectado");
+  const timeoutMs = (options && options.timeoutMs) || 60000;
+  const sendTarget = botTarget || targetGroup;
+
+  return new Promise(async (resolve, reject) => {
+    const entry = {
+      resolve, reject, waitForMedia: true,
+      messages: [], collectTimer: null, settled: false, timer: null,
+      skipped: 0,
+    };
+
+    entry.timer = setTimeout(() => {
+      if (entry.settled) return;
+      entry.settled = true;
+      const idx = pendingQueries.indexOf(entry);
+      if (idx !== -1) pendingQueries.splice(idx, 1);
+      reject(new Error("Tiempo agotado. El bot no respondio en " + (timeoutMs / 1000) + "s."));
+    }, timeoutMs);
+
+    pendingQueries.push(entry);
+
+    try {
+      // Enviar la foto con caption /facial
+      const ext = mimeType === "image/png" ? "png" : "jpg";
+      const sent = await client.sendFile(sendTarget, {
+        file: photoBuffer,
+        caption: "/facial",
+        attributes: [{ className: "DocumentAttributeFilename", fileName: "photo." + ext }],
+        mimeType: mimeType || "image/jpeg",
+        forceDocument: false,
+      });
+      if (sent && sent.id) silentMessageIds.add(sent.id);
+      console.log("[Telegram] Foto enviada al bot con /facial, ID:", sent && sent.id);
+    } catch (err) {
+      if (!entry.settled) {
+        entry.settled = true;
+        clearTimeout(entry.timer);
+        const idx = pendingQueries.indexOf(entry);
+        if (idx !== -1) pendingQueries.splice(idx, 1);
+        reject(err);
+      }
+    }
+  });
+}
+
 // ── Enviar comando silencioso y esperar respuesta REAL del bot ─
 async function sendCommandAndWait(command, options) {
   if (!client || !targetGroup) throw new Error("No conectado");
@@ -490,6 +537,6 @@ function getSessionString() { return client ? client.session.save() : ""; }
 
 module.exports = {
   connect, resolveGroup, resolveBot, getMessages, downloadFile,
-  sendMessage, sendCommandAndWait,
+  sendMessage, sendCommandAndWait, sendPhotoAndWait,
   listenForNewMessages, isConnected, getMyUserId, getBotUserId, getSessionString,
 };
