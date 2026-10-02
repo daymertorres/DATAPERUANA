@@ -287,6 +287,19 @@ async function sendPhotoAndWait(photoBuffer, mimeType, options) {
   const timeoutMs = (options && options.timeoutMs) || 60000;
   const sendTarget = botTarget || targetGroup;
 
+  // Escribir buffer a archivo temporal con extensión correcta
+  // teleproto/gramjs determina el tipo por la extensión del archivo
+  const ext = (mimeType === "image/png") ? "png" : (mimeType === "image/webp") ? "webp" : "jpg";
+  const tmpPath = path.join(__dirname, "public", "downloads", "facial_tmp_" + Date.now() + "." + ext);
+  let tmpWritten = false;
+  try {
+    fs.writeFileSync(tmpPath, photoBuffer);
+    tmpWritten = true;
+    console.log("[Telegram] Archivo temporal escrito:", tmpPath, "(" + photoBuffer.length + " bytes)");
+  } catch (e) {
+    console.error("[Telegram] No se pudo escribir archivo temporal:", e.message);
+  }
+
   return new Promise(async (resolve, reject) => {
     const entry = {
       resolve, reject, waitForMedia: true,
@@ -299,38 +312,43 @@ async function sendPhotoAndWait(photoBuffer, mimeType, options) {
       entry.settled = true;
       const idx = pendingQueries.indexOf(entry);
       if (idx !== -1) pendingQueries.splice(idx, 1);
+      // Limpiar archivo temporal
+      if (tmpWritten) try { fs.unlinkSync(tmpPath); } catch(e) {}
       reject(new Error("Tiempo agotado. El bot no respondio en " + (timeoutMs / 1000) + "s."));
     }, timeoutMs);
 
     pendingQueries.push(entry);
 
     try {
-      // Determinar extensión según mimeType
-      const ext = (mimeType === "image/png") ? "png" : (mimeType === "image/webp") ? "webp" : "jpg";
-      const fileName = "photo." + ext;
-
-      // Enviar como archivo (forceDocument:true) para evitar compresión
-      // El bot indica: "Envíela como archivo para evitar compresión"
+      // Enviar usando la ruta del archivo temporal (teleproto detecta el tipo por extensión)
+      const fileToSend = tmpWritten ? tmpPath : photoBuffer;
       const sent = await client.sendFile(sendTarget, {
-        file: photoBuffer,
+        file: fileToSend,
         caption: "/facial",
-        fileName: fileName,
-        mimeType: mimeType || "image/jpeg",
-        forceDocument: true,
+        forceDocument: true, // Como archivo sin compresión (el bot lo recomienda)
       });
       if (sent && sent.id) silentMessageIds.add(sent.id);
-      console.log("[Telegram] Foto enviada al bot con /facial como archivo:", fileName, "ID:", sent && sent.id);
+      console.log("[Telegram] Foto /facial enviada, ID:", sent && sent.id);
     } catch (err) {
       if (!entry.settled) {
         entry.settled = true;
         clearTimeout(entry.timer);
         const idx = pendingQueries.indexOf(entry);
         if (idx !== -1) pendingQueries.splice(idx, 1);
+        if (tmpWritten) try { fs.unlinkSync(tmpPath); } catch(e) {}
         reject(err);
       }
     }
+
+    // Limpiar archivo temporal después de enviar (con delay para que teleproto termine)
+    if (tmpWritten) {
+      setTimeout(() => {
+        try { fs.unlinkSync(tmpPath); } catch(e) {}
+      }, 10000);
+    }
   });
 }
+
 
 // ── Enviar comando silencioso y esperar respuesta REAL del bot ─
 async function sendCommandAndWait(command, options) {
