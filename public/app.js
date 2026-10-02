@@ -184,6 +184,7 @@ const VIEW_TITLES = {
   tels:      "Líneas por DNI",
   actana:    "Acta de Nacimiento",
   denuncias: "Denuncias Penales",
+  facial:    "Búsqueda Facial",
 };
 
 window.navigate = function(viewId, linkEl) {
@@ -668,6 +669,115 @@ window.queryDenuncias = async function() {
   }
 };
 
+// ── Búsqueda Facial (/facial + foto) ─────────────────────────
+let facialFile = null;
+
+window.onFacialFileChange = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    showToast("Solo se permiten imágenes (JPG, PNG).", "error");
+    return;
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    showToast("La imagen supera los 15 MB.", "error");
+    return;
+  }
+  facialFile = file;
+
+  // Mostrar preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = $("facial-preview-img");
+    const placeholder = $("facial-placeholder");
+    if (img) { img.src = e.target.result; img.classList.remove("hidden"); }
+    if (placeholder) placeholder.classList.add("hidden");
+  };
+  reader.readAsDataURL(file);
+
+  // Habilitar botón
+  const btn = $("btn-facial");
+  if (btn) btn.disabled = false;
+};
+
+window.queryFacial = async function() {
+  if (!facialFile) {
+    showToast("Selecciona una foto primero.", "error");
+    return;
+  }
+
+  showResultLoading("result-facial", "Analizando rostro con /facial...");
+  setLoading("btn-facial", true);
+
+  try {
+    const formData = new FormData();
+    formData.append("photo", facialFile);
+
+    const res = await fetchWithTimeout("/api/query/facial", {
+      method: "POST",
+      body: formData,
+    }, 65000);
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      const msg = data.error || "Error en búsqueda facial";
+      showResultEmpty("result-facial", "ph-warning-circle", msg);
+      showToast(msg, "error");
+      return;
+    }
+    renderFacialResult(data);
+    showToast("Reporte facial obtenido.", "success");
+  } catch (err) {
+    const msg = err.message.includes("agotado") ? err.message : "Error de conexión: " + err.message;
+    showResultEmpty("result-facial", "ph-warning-octagon", "Error", msg);
+    showToast(msg, "error");
+  } finally {
+    setLoading("btn-facial", false);
+  }
+};
+
+// ── Renderizar resultado facial (PDF en modal) ────────────────
+function renderFacialResult(data) {
+  if (!data.mediaGroup || data.mediaGroup.length === 0) {
+    showResultEmpty("result-facial", "ph-warning", "Sin resultado", "El bot no devolvió un PDF.");
+    return;
+  }
+
+  const pdfs = data.mediaGroup.filter(item =>
+    item.fileType === "pdf" || /\.pdf$/i.test(item.fileName || "")
+  );
+
+  if (pdfs.length === 0) {
+    showResultEmpty("result-facial", "ph-warning", "Sin PDF", "El bot respondió pero no con un PDF biométrico.");
+    return;
+  }
+
+  let html = `<div class="facial-result-modal">`;
+
+  pdfs.forEach((item, i) => {
+    const name = esc(item.fileName || `reporte_facial_${i+1}.pdf`);
+    html += `
+      <div class="facial-pdf-hero">
+        <div class="facial-pdf-icon-wrap">
+          <i class="ph ph-file-pdf"></i>
+        </div>
+        <div class="facial-pdf-info">
+          <div class="facial-pdf-name">${name}</div>
+          <div class="facial-pdf-sub">Reporte Biométrico Facial</div>
+        </div>
+      </div>
+      <div class="facial-pdf-frame-wrap">
+        <iframe class="facial-pdf-frame" src="/api/preview/${item.messageId}" title="${name}"></iframe>
+      </div>
+      <a class="facial-pdf-download-btn" href="${esc(item.downloadUrl)}" download="${name}" target="_blank">
+        <i class="ph ph-download-simple"></i> Descargar Reporte PDF
+      </a>
+    `;
+  });
+
+  html += `</div>`;
+  openResultModal("📋 REPORTE BIOMÉTRICO FACIAL", html);
+}
+
 // ── Lightbox ──────────────────────────────────────────────────
 window.openLightbox = function(src) {
   const img = $("lightbox-img");
@@ -766,6 +876,15 @@ document.addEventListener("DOMContentLoaded", async function() {
   // Highlight active nav based on current view
   const activeNav = document.querySelector(`.nav-item[data-view="dashboard"]`);
   if (activeNav) activeNav.classList.add("active");
+
+  // Click en zona de preview facial abre selector
+  const facialWrap = $("facial-preview-wrap");
+  if (facialWrap) {
+    facialWrap.addEventListener("click", () => {
+      const input = $("facial-photo-input");
+      if (input) input.click();
+    });
+  }
 
   setTimeout(() => {
     const input = document.querySelector("#view-dashboard .query-input");
