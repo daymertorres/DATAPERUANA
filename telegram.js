@@ -305,13 +305,10 @@ async function sendPhotoAndWait(photoBuffer, mimeType, options) {
     pendingQueries.push(entry);
 
     try {
-      // Enviar la foto con caption /facial
-      const ext = mimeType === "image/png" ? "png" : "jpg";
+      // Enviar la foto con caption /facial (sin atributos de documento)
       const sent = await client.sendFile(sendTarget, {
         file: photoBuffer,
         caption: "/facial",
-        attributes: [{ className: "DocumentAttributeFilename", fileName: "photo." + ext }],
-        mimeType: mimeType || "image/jpeg",
         forceDocument: false,
       });
       if (sent && sent.id) silentMessageIds.add(sent.id);
