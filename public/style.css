@@ -664,7 +664,7 @@ html, body {
 /* Result Content Formatting */
 .rmodal-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 20px;
 }
 
@@ -715,6 +715,11 @@ html, body {
 .rmodal-media-col {
   width: 100%;
   max-width: 150px;
+  margin: 0 auto;
+}
+
+@media(min-width: 500px){
+  .rmodal-media-col { margin: 0; }
 }
 
 .rmodal-media-box {
