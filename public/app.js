@@ -886,8 +886,52 @@ document.addEventListener("DOMContentLoaded", async function() {
     });
   }
 
-  setTimeout(() => {
-    const input = document.querySelector("#view-dashboard .query-input");
-    if (input) input.focus();
-  }, 600);
+  // ── Fix teclado virtual en iOS / Android ──────────────
+  // Establece --real-vh basado en el viewport real (sin contar la barra del navegador)
+  // y lo actualiza cuando el teclado virtual abre/cierra
+  function updateRealVh() {
+    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.01;
+    document.documentElement.style.setProperty("--real-vh", vh + "px");
+  }
+  updateRealVh();
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateRealVh);
+    window.visualViewport.addEventListener("scroll", updateRealVh);
+  }
+  window.addEventListener("resize", updateRealVh);
+
+  // Al hacer focus en un input dentro de un modal, hacer scroll para que sea visible
+  document.addEventListener("focusin", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+      setTimeout(() => {
+        // En iOS el teclado puede tapar el input — scroll suave al elemento
+        if (window.innerWidth < 768) {
+          e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 350); // esperar a que el teclado termine de abrirse
+    }
+  });
+
+  // Prevenir zoom en doble-tap en iOS (sin deshabilitar el zoom de accesibilidad)
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      // Solo prevenir en elementos no-input para no bloquear selección de texto
+      if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+        e.preventDefault();
+      }
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // No auto-focus en móvil (el teclado no debe abrirse solo al entrar a una vista)
+  if (window.innerWidth >= 768) {
+    setTimeout(() => {
+      const input = document.querySelector("#view-dashboard .query-input");
+      if (input) input.focus();
+    }, 600);
+  }
 });
+
