@@ -4,398 +4,324 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>ONIXDATA — Consulta Ciudadana RENIEC</title>
+  <title>ONIXDATA — Consulta Ciudadana</title>
   <meta name="description" content="Sistema de consulta de datos RENIEC, telefonia y denuncias. Bot @onixdataa_bot." />
-  <meta name="theme-color" content="#0d0f1a" />
-  <meta property="og:title" content="ONIXDATA — Consulta RENIEC" />
-  <meta property="og:description"
-    content="Consulta DNI, nombre, titular telefonico, lineas, acta de nacimiento y denuncias." />
-  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#ffffff" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js" defer></script>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-  <!-- APP -->
   <div id="app" class="app">
-
+    <!-- Sidebar Overlay for mobile -->
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon"><i class="ph-fill ph-identification-card"></i></div>
-          <span class="sidebar-logo-text">ONIXDATA</span>
+          <div class="logo-icon"><i class="ph-fill ph-identification-badge"></i></div>
+          <span class="logo-text">ONIXDATA</span>
         </div>
         <button class="sidebar-close-btn" onclick="closeSidebar()" id="sidebar-close">
           <i class="ph ph-x"></i>
         </button>
       </div>
+
       <div class="sidebar-search">
-        <div class="sidebar-search-wrap">
+        <div class="search-input-wrap">
           <i class="ph ph-magnifying-glass"></i>
-          <input type="text" class="sidebar-search-input" id="sidebar-search" placeholder="Buscar modulo..."
-            oninput="filterSidebarNav(this.value)" />
+          <input type="text" id="sidebar-search" placeholder="Buscar..." oninput="filterSidebarNav(this.value)" />
         </div>
       </div>
 
       <nav class="sidebar-nav">
         <a class="nav-item active" href="#" data-view="dashboard" onclick="navigate('dashboard',this)">
-          <i class="ph ph-house"></i><span>Inicio</span>
+          <i class="ph ph-house"></i><span>Home</span>
         </a>
 
-        <div class="nav-group">
-          <div class="nav-group-label">RENIEC</div>
-          <a class="nav-item" href="#" data-view="dni" onclick="navigate('dni',this)">
-            <i class="ph ph-identification-card"></i><span>Consulta por DNI</span>
-          </a>
-          <a class="nav-item" href="#" data-view="nm" onclick="navigate('nm',this)">
-            <i class="ph ph-magnifying-glass"></i><span>Busqueda por Nombre</span>
-          </a>
-          <a class="nav-item" href="#" data-view="actana" onclick="navigate('actana',this)">
-            <i class="ph ph-file-text"></i><span>Acta de Nacimiento</span>
-            <span class="nav-tag pdf">PDF</span>
-          </a>
-        </div>
+        <div class="nav-section-title">Consultas</div>
+        <a class="nav-item" href="#" data-view="dni" onclick="navigate('dni',this)">
+          <i class="ph ph-identification-card"></i><span>Reniec DNI</span>
+        </a>
+        <a class="nav-item" href="#" data-view="nm" onclick="navigate('nm',this)">
+          <i class="ph ph-users"></i><span>Búsqueda Nombres</span>
+        </a>
+        <a class="nav-item" href="#" data-view="actana" onclick="navigate('actana',this)">
+          <i class="ph ph-file-text"></i><span>Acta Nacimiento</span>
+        </a>
 
-        <div class="nav-group">
-          <div class="nav-group-label">TELEFONIA</div>
-          <a class="nav-item" href="#" data-view="telx" onclick="navigate('telx',this)">
-            <i class="ph ph-device-mobile"></i><span>Titular por Celular</span>
-          </a>
-          <a class="nav-item" href="#" data-view="tels" onclick="navigate('tels',this)">
-            <i class="ph ph-sim-card"></i><span>Lineas por DNI</span>
-          </a>
-        </div>
+        <div class="nav-section-title">Telefonía</div>
+        <a class="nav-item" href="#" data-view="telx" onclick="navigate('telx',this)">
+          <i class="ph ph-device-mobile"></i><span>Titular Celular</span>
+        </a>
+        <a class="nav-item" href="#" data-view="tels" onclick="navigate('tels',this)">
+          <i class="ph ph-sim-card"></i><span>Líneas DNI</span>
+        </a>
 
-        <div class="nav-group">
-          <div class="nav-group-label">JUSTICIA</div>
-          <a class="nav-item" href="#" data-view="denuncias" onclick="navigate('denuncias',this)">
-            <i class="ph ph-shield-warning"></i><span>Denuncias Penales</span>
-            <span class="nav-tag pdf">PDF</span>
-          </a>
-        </div>
+        <div class="nav-section-title">Legal</div>
+        <a class="nav-item" href="#" data-view="denuncias" onclick="navigate('denuncias',this)">
+          <i class="ph ph-scales"></i><span>Justicia / Denuncias</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="sidebar-bot-card">
-          <div class="sidebar-bot-icon"><i class="ph-fill ph-robot"></i></div>
-          <div class="sidebar-bot-info">
-            <div class="sidebar-bot-name">@onixdataa_bot</div>
-            <div class="sidebar-bot-sub">Bot de consultas</div>
+        <div class="user-card">
+          <div class="user-avatar"><i class="ph-fill ph-robot"></i></div>
+          <div class="user-info">
+            <div class="user-name">@onixdataa_bot</div>
+            <div class="user-role">Bot de consultas</div>
           </div>
-          <span class="status-dot" id="status-dot"></span>
+          <div class="status-indicator">
+            <span class="status-dot" id="status-dot"></span>
+          </div>
         </div>
       </div>
     </aside>
 
+    <!-- Main Content -->
     <div class="main-wrap">
       <header class="topbar">
-        <button class="topbar-menu-btn" id="menu-toggle" onclick="toggleSidebar()">
+        <button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()">
           <i class="ph ph-list"></i>
         </button>
-        <div class="topbar-center">
-          <div class="topbar-brand">
-            <i class="ph-fill ph-identification-card"></i>
-            <span class="topbar-title" id="topbar-title">Inicio</span>
-          </div>
+        <div class="topbar-title-wrap">
+          <h2 id="topbar-title" class="topbar-title">Home</h2>
         </div>
-        <div class="topbar-right">
-          <div class="topbar-status" id="topbar-status">
+        <div class="topbar-actions">
+          <div class="connection-status" id="topbar-status">
             <span class="status-dot" id="topbar-dot"></span>
-            <span id="topbar-status-text">Conectando...</span>
+            <span id="topbar-status-text" class="status-text">Conectando...</span>
           </div>
         </div>
       </header>
 
-      <main class="content" id="content-area">
-
+      <main class="content-area" id="content-area">
+        
         <!-- DASHBOARD -->
         <div class="view active" id="view-dashboard">
-          <div class="view-header">
-            <h1>Acceso Rapido</h1>
-            <p>Selecciona un modulo para iniciar una consulta — Bot: <strong>@onixdataa_bot</strong></p>
+          <div class="dashboard-hero">
+            <div class="hero-content">
+              <h1>Sistema de Consultas Rápidas</h1>
+              <p>Accede de forma rápida y segura a información de RENIEC, telefonía y antecedentes.</p>
+            </div>
+            <div class="hero-illustration">
+              <i class="ph-duotone ph-shield-check"></i>
+            </div>
           </div>
+
           <div class="dashboard-grid">
-
-            <div class="dash-card" onclick="navigate('dni',null)" style="--accent:#6366f1">
-              <div class="dash-card-icon" style="background:rgba(99,102,241,.15)"><i
-                  class="ph ph-identification-card"></i></div>
-              <div class="dash-card-body">
-                <h3>Consulta por DNI</h3>
-                <p>Datos completos con foto del ciudadano.</p>
-                <div class="dash-tags"><span>/dni 12345678</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
+            <div class="dash-card" onclick="navigate('dni', document.querySelector('[data-view=\'dni\']'))">
+              <div class="card-icon-wrap" style="color: var(--accent-blue); background: var(--accent-blue-bg);"><i class="ph ph-identification-card"></i></div>
+              <h3>Reniec DNI</h3>
+              <p>Consulta datos completos con foto del ciudadano a partir de su DNI.</p>
             </div>
-
-            <div class="dash-card" onclick="navigate('nm',null)" style="--accent:#ec4899">
-              <div class="dash-card-icon" style="background:rgba(236,72,153,.15)"><i class="ph ph-magnifying-glass"></i>
-              </div>
-              <div class="dash-card-body">
-                <h3>Busqueda por Nombre</h3>
-                <p>Encuentra ciudadanos por nombres y apellidos.</p>
-                <div class="dash-tags"><span>/nm JUAN|PEREZ|GARCIA</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
+            <div class="dash-card" onclick="navigate('nm', document.querySelector('[data-view=\'nm\']'))">
+              <div class="card-icon-wrap" style="color: var(--accent-orange); background: #fef3c7;"><i class="ph ph-users"></i></div>
+              <h3>Búsqueda Nombres</h3>
+              <p>Encuentra ciudadanos por sus nombres y apellidos completos.</p>
             </div>
-
-            <div class="dash-card" onclick="navigate('telx',null)" style="--accent:#10b981">
-              <div class="dash-card-icon" style="background:rgba(16,185,129,.15)"><i class="ph ph-device-mobile"></i>
-              </div>
-              <div class="dash-card-body">
-                <h3>Titular por Celular</h3>
-                <p>Datos del titular de un numero de celular.</p>
-                <div class="dash-tags"><span>/telx 999999999</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
+            <div class="dash-card" onclick="navigate('telx', document.querySelector('[data-view=\'telx\']'))">
+              <div class="card-icon-wrap" style="color: var(--accent-green); background: #d1fae5;"><i class="ph ph-device-mobile"></i></div>
+              <h3>Titular Celular</h3>
+              <p>Obtén los datos del titular de un número telefónico celular.</p>
             </div>
-
-            <div class="dash-card" onclick="navigate('tels',null)" style="--accent:#f59e0b">
-              <div class="dash-card-icon" style="background:rgba(245,158,11,.15)"><i class="ph ph-sim-card"></i></div>
-              <div class="dash-card-body">
-                <h3>Lineas por DNI</h3>
-                <p>Lineas telefonicas asociadas a un DNI.</p>
-                <div class="dash-tags"><span>/tels 12345678</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
+            <div class="dash-card" onclick="navigate('tels', document.querySelector('[data-view=\'tels\']'))">
+              <div class="card-icon-wrap" style="color: #8b5cf6; background: #ede9fe;"><i class="ph ph-sim-card"></i></div>
+              <h3>Líneas por DNI</h3>
+              <p>Descubre cuántas líneas telefónicas están asociadas a un DNI.</p>
             </div>
-
-            <div class="dash-card" onclick="navigate('actana',null)" style="--accent:#06b6d4">
-              <div class="dash-card-icon" style="background:rgba(6,182,212,.15)"><i class="ph ph-file-text"></i></div>
-              <div class="dash-card-body">
-                <h3>Acta de Nacimiento</h3>
-                <p>Acta de nacimiento en PDF por DNI.</p>
-                <div class="dash-tags"><span>/actana 12345678</span><span class="nav-tag pdf"
-                    style="font-size:10px;padding:1px 5px">PDF</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
-            </div>
-
-            <div class="dash-card" onclick="navigate('denuncias',null)" style="--accent:#ef4444">
-              <div class="dash-card-icon" style="background:rgba(239,68,68,.15)"><i class="ph ph-shield-warning"></i>
-              </div>
-              <div class="dash-card-body">
-                <h3>Denuncias Penales</h3>
-                <p>Lista de denuncias asociadas a un DNI en PDF.</p>
-                <div class="dash-tags"><span>/denuncias 12345678</span><span class="nav-tag pdf"
-                    style="font-size:10px;padding:1px 5px">PDF</span></div>
-              </div>
-              <i class="ph ph-arrow-right dash-arrow"></i>
-            </div>
-
           </div>
         </div>
 
-        <!-- DNI COMPLETO -->
+        <!-- DNI -->
         <div class="view hidden" id="view-dni">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(99,102,241,.15);color:#6366f1"><i
-                class="ph ph-identification-card"></i></div>
-            <div>
-              <h1>Consulta por DNI</h1>
-              <p>RENIEC — Datos completos con foto del ciudadano</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Consulta de RENIEC</h2>
+              <p>Solo para pruebas rápidas. Ingresa un número de DNI válido.</p>
             </div>
-            <div class="view-meta"><span class="view-badge">DNI</span></div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR DNI</div>
-              <div class="input-group">
-                <i class="ph ph-identification-card"></i>
-                <input type="text" id="input-dni" class="query-input" placeholder="Ingrese DNI (8 digitos)"
-                  maxlength="8" inputmode="numeric" />
+            <div class="query-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Tipo de consulta</label>
+                  <div class="select-mock">
+                    <i class="ph ph-identification-card"></i>
+                    <span>RENIEC DNI</span>
+                    <i class="ph ph-caret-down drop-icon"></i>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Número de DNI</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-hash"></i>
+                    <input type="text" id="input-dni" class="query-input" placeholder="Ej: 61100142" maxlength="8" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="form-group btn-group">
+                  <button class="btn-primary" id="btn-dni" onclick="queryDni('dni')">
+                    <i class="ph ph-magnifying-glass"></i> Consultar
+                  </button>
+                </div>
               </div>
-              <button class="query-btn" id="btn-dni" onclick="queryDni('dni')">
-                <i class="ph ph-magnifying-glass"></i> Consultar DNI
-              </button>
               <div class="query-hints">
-                <span><i class="ph ph-shield-check"></i> Consulta segura</span>
-                <span><i class="ph ph-lightning"></i> Instantaneo</span>
-              </div>
-              <div id="recent-chips-wrap" class="chips-wrap"></div>
-            </div>
-            <div class="query-result-panel" id="result-dni">
-              <div class="result-empty">
-                <i class="ph ph-identification-card"></i>
-                <p>Realiza una busqueda</p>
-                <small>Ingresa un DNI valido para consultar</small>
+                <p>Reniec: DNI de 8 dígitos. <span id="recent-chips-wrap"></span></p>
               </div>
             </div>
+            <div id="result-dni" class="result-container"></div>
           </div>
         </div>
 
-        <!-- BUSQUEDA POR NOMBRE -->
+        <!-- NOMBRE -->
         <div class="view hidden" id="view-nm">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(236,72,153,.15);color:#ec4899"><i
-                class="ph ph-magnifying-glass"></i></div>
-            <div>
-              <h1>Busqueda por Nombre</h1>
-              <p>Encuentra ciudadanos — formato: NOMBRE|APE.PAT|APE.MAT</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Búsqueda por Nombre</h2>
+              <p>Encuentra coincidencias por nombre y apellidos.</p>
             </div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR NOMBRE</div>
-              <div class="input-group"><i class="ph ph-user"></i><input type="text" id="input-nm-nombres"
-                  class="query-input" placeholder="Nombre(s): JUAN" /></div>
-              <div class="input-group" style="margin-top:8px"><i class="ph ph-user-focus"></i><input type="text"
-                  id="input-nm-pat" class="query-input" placeholder="Apellido paterno: PEREZ" /></div>
-              <div class="input-group" style="margin-top:8px"><i class="ph ph-user-focus"></i><input type="text"
-                  id="input-nm-mat" class="query-input" placeholder="Apellido materno: GARCIA (opcional)" /></div>
-              <button class="query-btn pink" id="btn-nm" onclick="queryNombre()" style="margin-top:12px"><i
-                  class="ph ph-magnifying-glass"></i> Buscar por Nombre</button>
-              <div class="query-hints"><span><i class="ph ph-info"></i> Formato: NOMBRE|APE.PAT|APE.MAT</span></div>
-            </div>
-            <div class="query-result-panel" id="result-nm">
-              <div class="result-empty"><i class="ph ph-magnifying-glass"></i>
-                <p>Realiza una busqueda</p><small>Ingresa nombre y apellido paterno</small>
+            <div class="query-card">
+              <div class="form-grid multi">
+                <div class="form-group">
+                  <label>Nombres</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-user"></i>
+                    <input type="text" id="input-nm-nombres" class="query-input" placeholder="Ej: JUAN CARLOS">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Apellido Paterno</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-user-focus"></i>
+                    <input type="text" id="input-nm-pat" class="query-input" placeholder="Ej: PEREZ">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Apellido Materno</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-user-focus"></i>
+                    <input type="text" id="input-nm-mat" class="query-input" placeholder="Ej: GARCIA">
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btn-nm" onclick="queryNombre()">
+                  <i class="ph ph-magnifying-glass"></i> Consultar
+                </button>
               </div>
             </div>
+            <div id="result-nm" class="result-container"></div>
           </div>
         </div>
 
-        <!-- TITULAR POR CELULAR (/telx) -->
+        <!-- CELULAR TITULAR -->
         <div class="view hidden" id="view-telx">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(16,185,129,.15);color:#10b981"><i
-                class="ph ph-device-mobile"></i></div>
-            <div>
-              <h1>Titular por Celular</h1>
-              <p>Datos del titular de un numero de celular</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Titular por Celular</h2>
+              <p>Consulta el titular de un número de celular de 9 dígitos.</p>
             </div>
-            <div class="view-meta"><span class="view-badge green">TITULAR</span></div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR CELULAR</div>
-              <div class="input-group">
-                <i class="ph ph-device-mobile"></i>
-                <input type="text" id="input-telx" class="query-input" placeholder="Numero celular (9 digitos)"
-                  maxlength="9" inputmode="numeric" />
-              </div>
-              <button class="query-btn green" id="btn-telx" onclick="queryTelx()">
-                <i class="ph ph-magnifying-glass"></i> Consultar Titular
-              </button>
-              <div class="query-hints">
-                <span><i class="ph ph-info"></i> Ingresa 9 digitos sin espacios</span>
+            <div class="query-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número de celular</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-device-mobile"></i>
+                    <input type="text" id="input-telx" class="query-input" placeholder="Ej: 999888777" maxlength="9" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="form-group btn-group align-bottom">
+                  <button class="btn-primary" id="btn-telx" onclick="queryTelx()">
+                    <i class="ph ph-magnifying-glass"></i> Consultar
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="query-result-panel" id="result-telx">
-              <div class="result-empty"><i class="ph ph-device-mobile"></i>
-                <p>Realiza una busqueda</p><small>Ingresa un numero de celular valido</small>
-              </div>
-            </div>
+            <div id="result-telx" class="result-container"></div>
           </div>
         </div>
 
-        <!-- LINEAS POR DNI (/tels) -->
+        <!-- LINEAS DNI -->
         <div class="view hidden" id="view-tels">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(245,158,11,.15);color:#f59e0b"><i
-                class="ph ph-sim-card"></i></div>
-            <div>
-              <h1>Lineas por DNI</h1>
-              <p>Lineas telefonicas asociadas a un DNI</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Líneas por DNI</h2>
+              <p>Descubre cuántas líneas telefónicas están asociadas a un DNI.</p>
             </div>
-            <div class="view-meta"><span class="view-badge gold">LINEAS</span></div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR DNI</div>
-              <div class="input-group">
-                <i class="ph ph-identification-card"></i>
-                <input type="text" id="input-tels" class="query-input" placeholder="Ingrese DNI (8 digitos)"
-                  maxlength="8" inputmode="numeric" />
-              </div>
-              <button class="query-btn gold" id="btn-tels" onclick="queryTels()">
-                <i class="ph ph-magnifying-glass"></i> Consultar Lineas
-              </button>
-              <div class="query-hints">
-                <span><i class="ph ph-info"></i> Muestra lineas registradas al DNI</span>
+            <div class="query-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número de DNI</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-identification-card"></i>
+                    <input type="text" id="input-tels" class="query-input" placeholder="Ej: 12345678" maxlength="8" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="form-group btn-group align-bottom">
+                  <button class="btn-primary" id="btn-tels" onclick="queryTels()">
+                    <i class="ph ph-magnifying-glass"></i> Consultar
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="query-result-panel" id="result-tels">
-              <div class="result-empty"><i class="ph ph-sim-card"></i>
-                <p>Realiza una busqueda</p><small>Ingresa un DNI valido para ver sus lineas</small>
-              </div>
-            </div>
+            <div id="result-tels" class="result-container"></div>
           </div>
         </div>
 
-        <!-- ACTA DE NACIMIENTO (/actana) -->
+        <!-- ACTA NACIMIENTO -->
         <div class="view hidden" id="view-actana">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(6,182,212,.15);color:#06b6d4"><i
-                class="ph ph-file-text"></i></div>
-            <div>
-              <h1>Acta de Nacimiento</h1>
-              <p>Obtener el acta de nacimiento en PDF por DNI</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Acta de Nacimiento</h2>
+              <p>Obtén el acta de nacimiento en formato PDF usando el DNI.</p>
             </div>
-            <div class="view-meta"><span class="view-badge pdf-badge">PDF</span></div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR DNI</div>
-              <div class="input-group">
-                <i class="ph ph-identification-card"></i>
-                <input type="text" id="input-actana" class="query-input" placeholder="Ingrese DNI (8 digitos)"
-                  maxlength="8" inputmode="numeric" />
-              </div>
-              <button class="query-btn cyan" id="btn-actana" onclick="queryActana()">
-                <i class="ph ph-file-text"></i> Obtener Acta de Nacimiento
-              </button>
-              <div class="query-hints">
-                <span><i class="ph ph-file-pdf"></i> Resultado en formato PDF</span>
+            <div class="query-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número de DNI</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-file-text"></i>
+                    <input type="text" id="input-actana" class="query-input" placeholder="Ej: 12345678" maxlength="8" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="form-group btn-group align-bottom">
+                  <button class="btn-primary" id="btn-actana" onclick="queryActana()">
+                    <i class="ph ph-file-pdf"></i> Generar Acta
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="query-result-panel" id="result-actana">
-              <div class="result-empty"><i class="ph ph-file-text"></i>
-                <p>Realiza una busqueda</p><small>Ingresa un DNI valido para obtener el acta</small>
-              </div>
-            </div>
+            <div id="result-actana" class="result-container"></div>
           </div>
         </div>
 
-        <!-- DENUNCIAS PENALES (/denuncias) -->
+        <!-- DENUNCIAS -->
         <div class="view hidden" id="view-denuncias">
-          <div class="view-header">
-            <div class="view-header-icon" style="background:rgba(239,68,68,.15);color:#ef4444"><i
-                class="ph ph-shield-warning"></i></div>
-            <div>
-              <h1>Denuncias Penales</h1>
-              <p>Lista de denuncias asociadas a un DNI en PDF</p>
+          <div class="module-container">
+            <div class="module-header">
+              <h2>Denuncias Penales</h2>
+              <p>Consulta las denuncias policiales y judiciales asociadas a un DNI.</p>
             </div>
-            <div class="view-meta"><span class="view-badge pdf-badge">PDF</span></div>
-          </div>
-          <div class="query-layout">
-            <div class="query-form-panel">
-              <div class="form-section-label">BUSQUEDA POR DNI</div>
-              <div class="input-group">
-                <i class="ph ph-identification-card"></i>
-                <input type="text" id="input-denuncias" class="query-input" placeholder="Ingrese DNI (8 digitos)"
-                  maxlength="8" inputmode="numeric" />
-              </div>
-              <button class="query-btn red" id="btn-denuncias" onclick="queryDenuncias()">
-                <i class="ph ph-shield-warning"></i> Consultar Denuncias
-              </button>
-              <div class="query-hints">
-                <span><i class="ph ph-file-pdf"></i> Resultado en formato PDF</span>
+            <div class="query-card">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Número de DNI</label>
+                  <div class="input-wrap">
+                    <i class="ph ph-shield-warning"></i>
+                    <input type="text" id="input-denuncias" class="query-input" placeholder="Ej: 12345678" maxlength="8" inputmode="numeric">
+                  </div>
+                </div>
+                <div class="form-group btn-group align-bottom">
+                  <button class="btn-primary" id="btn-denuncias" onclick="queryDenuncias()">
+                    <i class="ph ph-magnifying-glass"></i> Consultar
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="query-result-panel" id="result-denuncias">
-              <div class="result-empty"><i class="ph ph-shield-warning"></i>
-                <p>Realiza una busqueda</p><small>Ingresa un DNI valido para ver denuncias</small>
-              </div>
-            </div>
+            <div id="result-denuncias" class="result-container"></div>
           </div>
         </div>
 
@@ -408,7 +334,7 @@
     <div class="rmodal-backdrop" onclick="closeResultModal()"></div>
     <div class="rmodal-dialog">
       <div class="rmodal-header">
-        <span id="rmodal-title">RESULTADO</span>
+        <h3 id="rmodal-title">Resultado</h3>
         <button class="rmodal-close" onclick="closeResultModal()"><i class="ph ph-x"></i></button>
       </div>
       <div class="rmodal-body" id="rmodal-body"></div>
