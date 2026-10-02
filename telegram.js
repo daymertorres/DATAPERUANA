@@ -305,14 +305,21 @@ async function sendPhotoAndWait(photoBuffer, mimeType, options) {
     pendingQueries.push(entry);
 
     try {
-      // Enviar la foto con caption /facial (sin atributos de documento)
+      // Determinar extensión según mimeType
+      const ext = (mimeType === "image/png") ? "png" : (mimeType === "image/webp") ? "webp" : "jpg";
+      const fileName = "photo." + ext;
+
+      // Enviar como archivo (forceDocument:true) para evitar compresión
+      // El bot indica: "Envíela como archivo para evitar compresión"
       const sent = await client.sendFile(sendTarget, {
         file: photoBuffer,
         caption: "/facial",
-        forceDocument: false,
+        fileName: fileName,
+        mimeType: mimeType || "image/jpeg",
+        forceDocument: true,
       });
       if (sent && sent.id) silentMessageIds.add(sent.id);
-      console.log("[Telegram] Foto enviada al bot con /facial, ID:", sent && sent.id);
+      console.log("[Telegram] Foto enviada al bot con /facial como archivo:", fileName, "ID:", sent && sent.id);
     } catch (err) {
       if (!entry.settled) {
         entry.settled = true;
